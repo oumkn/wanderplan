@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Home } from 'lucide-react'
 import { apiPost } from '@/lib/api'
 import { DestinationCard } from '@/components/discover/destination-card'
 import { DestinationSkeleton } from '@/components/discover/destination-skeleton'
@@ -42,8 +44,8 @@ function normalise(d: Destination) {
   }
 }
 
-export default function DiscoverPage({ params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = use(params)
+export default function DiscoverPage({ params }: { params: { tripId: string } }) {
+  const { tripId } = params
   const router = useRouter()
   const [destinations, setDestinations] = useState<ReturnType<typeof normalise>[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,6 +70,12 @@ export default function DiscoverPage({ params }: { params: Promise<{ tripId: str
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="mb-4">
+          <Link href="/trips" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors">
+            <Home className="w-3.5 h-3.5" />
+            Home
+          </Link>
+        </div>
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
             {loading ? 'Finding your perfect destinations…' : 'Choose your destination'}
@@ -101,7 +109,7 @@ export default function DiscoverPage({ params }: { params: Promise<{ tripId: str
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {loading
-            ? [...Array(6)].map((_, i) => <DestinationSkeleton key={i} />)
+            ? [...Array(4)].map((_, i) => <DestinationSkeleton key={i} />)
             : destinations.map((dest) => (
                 <DestinationCard key={dest.id} destination={dest} onSelect={handleSelect} />
               ))}

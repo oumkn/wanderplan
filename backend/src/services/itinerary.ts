@@ -6,6 +6,8 @@ interface ActivityResult {
   description: string
   durationMinutes: number
   costEstimate: number
+  latitude: number | null
+  longitude: number | null
 }
 
 export interface DayResult {
@@ -36,7 +38,7 @@ export async function* streamItinerary(params: {
       ? `Only generate days NOT in this list: ${params.excludeDayNumbers.join(', ')}.`
       : ''
 
-  const systemPrompt = `You are a travel itinerary expert. Output each day as a JSON object on its own, separated by the delimiter "${DAY_DELIMITER}". No markdown, no explanation — just alternating JSON and delimiters.`
+  const systemPrompt = `You are a travel itinerary expert. Output each day as a JSON object on its own, separated by the delimiter "${DAY_DELIMITER}". No markdown, no explanation — just alternating JSON and delimiters. Always include the best-known decimal latitude and longitude for each activity location; use null only if the place has no fixed location.`
 
   const prompt = `Create a ${totalDays}-day itinerary for ${params.destination}.
 Travel dates: ${params.startDate} to ${params.endDate}
@@ -57,7 +59,9 @@ For each day, output a JSON object followed by "${DAY_DELIMITER}":
       "title": "string",
       "description": "string",
       "durationMinutes": number,
-      "costEstimate": number
+      "costEstimate": number,
+      "latitude": number,
+      "longitude": number
     },
     { "slot": "afternoon", ... },
     { "slot": "evening", ... }

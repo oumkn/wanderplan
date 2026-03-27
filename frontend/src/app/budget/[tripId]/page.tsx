@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { apiGet, apiPost } from '@/lib/api'
+import { Home } from 'lucide-react'
+import { apiGet, apiPost, apiPatch } from '@/lib/api'
 import { BudgetTable, BudgetTableSkeleton, type BudgetItem } from '@/components/budget/budget-table'
 import { BudgetGauge } from '@/components/budget/budget-gauge'
 import { PerPersonSplit } from '@/components/budget/per-person-split'
@@ -19,8 +21,9 @@ interface BudgetData {
   items: BudgetItem[]
 }
 
-export default function BudgetPage({ params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = use(params)
+export default function BudgetPage({ params }: { params: { tripId: string } }) {
+  const { tripId } = params
+  const router = useRouter()
   const [items, setItems] = useState<BudgetItem[]>([])
   const [trip, setTrip] = useState<Trip | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,8 +63,9 @@ export default function BudgetPage({ params }: { params: Promise<{ tripId: strin
   async function handleSaveTrip() {
     setSaving(true)
     try {
-      await apiPost(`/api/v1/trips/${tripId}`, { status: 'complete' })
+      await apiPatch(`/api/v1/trips/${tripId}`, { status: 'complete' })
       toast.success('Trip saved!')
+      router.push('/trips')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save trip')
     } finally {
@@ -76,6 +80,12 @@ export default function BudgetPage({ params }: { params: Promise<{ tripId: strin
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 pb-24">
       <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="mb-4">
+          <Link href="/trips" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors">
+            <Home className="w-3.5 h-3.5" />
+            Home
+          </Link>
+        </div>
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Budget Planner</h1>
           <p className="mt-1 text-gray-500 text-sm">
@@ -113,13 +123,15 @@ export default function BudgetPage({ params }: { params: Promise<{ tripId: strin
             >
               ← Itinerary
             </Link>
-            <button
-              onClick={handleSaveTrip}
-              disabled={saving}
-              className="flex items-center justify-center flex-1 h-12 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-60 transition-colors"
-            >
-              {saving ? 'Saving…' : '🎉 Save Trip'}
-            </button>
+            {trip?.status !== 'complete' && (
+              <button
+                onClick={handleSaveTrip}
+                disabled={saving}
+                className="flex items-center justify-center flex-1 h-12 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+              >
+                {saving ? 'Saving…' : '🎉 Save Trip'}
+              </button>
+            )}
           </div>
         </div>
       )}

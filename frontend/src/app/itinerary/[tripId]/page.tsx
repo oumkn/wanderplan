@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState, use, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { Home } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { apiGet } from '@/lib/api'
 import { DayCard } from '@/components/itinerary/day-card'
 import { StreamingIndicator } from '@/components/itinerary/streaming-indicator'
 import { toast } from 'sonner'
@@ -69,15 +71,19 @@ async function* readStream(url: string, authHeader: string, body?: unknown): Asy
   }
 }
 
-export default function ItineraryPage({ params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = use(params)
+export default function ItineraryPage({ params }: { params: { tripId: string } }) {
+  const { tripId } = params
   const [days, setDays] = useState<Day[]>([])
   const [streaming, setStreaming] = useState(false)
   const [streamingDay, setStreamingDay] = useState<number | null>(null)
   const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null)
   const [newDayNumbers, setNewDayNumbers] = useState<Set<number>>(new Set())
+  const [tripStatus, setTripStatus] = useState<string | null>(null)
+  const generatingRef = useRef(false)
 
   const generate = useCallback(async () => {
+    if (generatingRef.current) return
+    generatingRef.current = true
     setStreaming(true)
     setDays([])
     setNewDayNumbers(new Set())
@@ -97,16 +103,20 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
     } finally {
       setStreaming(false)
       setStreamingDay(null)
+      generatingRef.current = false
     }
   }, [tripId])
 
-  // On mount: check if itinerary exists, else generate
+  // On mount: fetch trip status + check if itinerary exists, else generate
   useEffect(() => {
     const authHeader = getAuthHeader()
     authHeader.then(async (auth) => {
-      const res = await fetch(`${API_URL}/api/v1/trips/${tripId}/itinerary`, {
-        headers: { Authorization: auth },
-      })
+      const [tripData, res] = await Promise.all([
+        apiGet<{ status: string }>(`/api/v1/trips/${tripId}`),
+        fetch(`${API_URL}/api/v1/trips/${tripId}/itinerary`, { headers: { Authorization: auth } }),
+      ])
+      setTripStatus(tripData.status)
+
       const json = await res.json()
       const existingDays: Day[] = json.data?.days ?? []
 
@@ -144,6 +154,12 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 pb-24">
       <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="mb-4">
+          <Link href="/trips" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors">
+            <Home className="w-3.5 h-3.5" />
+            Home
+          </Link>
+        </div>
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Your Itinerary</h1>
           {streaming && (
@@ -174,13 +190,21 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
       {/* Sticky bottom bar */}
       {showContinue && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg px-4 py-4">
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto flex gap-3">
             <Link
-              href={`/budget/${tripId}`}
-              className="flex items-center justify-center w-full h-12 rounded-xl bg-indigo-600 text-white font-semibold text-base hover:bg-indigo-700 transition-colors"
+              href={`/map/${tripId}`}
+              className="flex items-center justify-center gap-2 flex-1 h-12 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
             >
-              Continue to Budget →
+              🗺️ View on Map
             </Link>
+            {tripStatus !== 'complete' && (
+              <Link
+                href={`/budget/${tripId}`}
+                className="flex items-center justify-center flex-1 h-12 rounded-xl bg-indigo-600 text-white font-semibold text-base hover:bg-indigo-700 transition-colors"
+              >
+                Continue to Budget →
+              </Link>
+            )}
           </div>
         </div>
       )}

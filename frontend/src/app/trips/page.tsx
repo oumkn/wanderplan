@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Users, Calendar, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Users, Calendar, Plus, MapPin } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { apiGet } from '@/lib/api'
 
@@ -67,6 +68,7 @@ export default function TripsPage() {
 }
 
 function TripCard({ trip }: { trip: Trip }) {
+  const router = useRouter()
   const href =
     trip.status === 'draft'
       ? '/onboarding'
@@ -83,36 +85,50 @@ function TripCard({ trip }: { trip: Trip }) {
   }
 
   return (
-    <Link href={href}>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <div className="text-2xl mb-1">{trip.destination_flag ?? '🗺️'}</div>
-            <h3 className="font-semibold text-gray-900">
-              {trip.destination_country ?? 'Destination TBD'}
-            </h3>
-          </div>
-          <span
-            className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${statusColors[trip.status] ?? statusColors.draft}`}
-          >
-            {trip.status}
-          </span>
+    <div
+      onClick={() => router.push(href)}
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="text-2xl mb-1">{trip.destination_flag ?? '🗺️'}</div>
+          <h3 className="font-semibold text-gray-900">
+            {trip.destination_country ?? 'Destination TBD'}
+          </h3>
         </div>
+        <span
+          className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${statusColors[trip.status] ?? statusColors.draft}`}
+        >
+          {trip.status}
+        </span>
+      </div>
 
-        <div className="space-y-1.5 text-sm text-gray-500">
-          {trip.start_date && trip.end_date && (
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
-              {trip.start_date} → {trip.end_date}
-            </div>
-          )}
+      <div className="space-y-1.5 text-sm text-gray-500">
+        {trip.start_date && trip.end_date && (
           <div className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" />
-            {trip.group_size} {trip.group_size === 1 ? 'person' : 'people'}
+            <Calendar className="w-3.5 h-3.5" />
+            {trip.start_date} → {trip.end_date}
           </div>
+        )}
+        <div className="flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5" />
+          {trip.group_size} {trip.group_size === 1 ? 'person' : 'people'}
         </div>
       </div>
-    </Link>
+
+      {trip.destination_country && (
+        <div className="mt-3 pt-3 border-t border-gray-50 flex justify-end">
+          <Link
+            href={`/map/${trip.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            View Map
+          </Link>
+        </div>
+      )}
+    </div>
   )
 }
 

@@ -58,6 +58,8 @@ export interface Activity {
   costEstimate: number | null
   costCurrency: string
   sortOrder: number
+  latitude: number | null
+  longitude: number | null
   createdAt: string
   updatedAt: string
 }

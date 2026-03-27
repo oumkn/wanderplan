@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Slider } from '@/components/ui/slider'
 import { useOnboardingStore } from '@/stores/onboarding-store'
 
 export function TripDetailsForm() {
@@ -139,16 +138,14 @@ export function TripDetailsForm() {
                 ${budgetAmount.toLocaleString()}
               </span>
             </div>
-            <Slider
+            <input
+              type="range"
               min={500}
               max={20000}
               step={100}
-              value={[budgetAmount]}
-              onValueChange={(val) => {
-                const num = Array.isArray(val) ? val[0] : val
-                setBudgetAmount(num as number)
-              }}
-              className="w-full"
+              value={budgetAmount}
+              onChange={(e) => setBudgetAmount(Number(e.target.value))}
+              className="w-full h-2 accent-indigo-600 cursor-pointer"
             />
             <div className="flex justify-between mt-1">
               <span className="text-xs text-gray-400">$500</span>

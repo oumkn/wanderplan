@@ -1,5 +1,8 @@
 'use client'
 
+import Link from 'next/link'
+import { Home } from 'lucide-react'
+
 interface ProgressBarProps {
   currentStep: number
   totalSteps: number
@@ -10,6 +13,17 @@ export function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps
   return (
     <div className="w-full bg-white border-b border-gray-100 px-4 py-4">
       <div className="max-w-2xl mx-auto">
+        {/* Home link */}
+        <div className="flex justify-start mb-3">
+          <Link
+            href="/trips"
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
+          >
+            <Home className="w-3.5 h-3.5" />
+            Home
+          </Link>
+        </div>
+
         {/* Step labels */}
         <div className="flex justify-between mb-2">
           {steps.map((label, idx) => {

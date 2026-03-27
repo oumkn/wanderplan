@@ -74,14 +74,14 @@ itineraryRouter.post('/:id/itinerary/generate', async (c) => {
         // Save day to DB
         const { data: savedDay, error: dayError } = await db
           .from('itinerary_days')
-          .insert({
+          .upsert({
             trip_id: tripId,
             day_number: day.dayNumber,
             date: day.date,
             restaurant_name: day.restaurantName,
             restaurant_description: day.restaurantDescription,
             transport_note: day.transportNote,
-          })
+          }, { onConflict: 'trip_id,day_number' })
           .select()
           .single()
 
@@ -101,6 +101,8 @@ itineraryRouter.post('/:id/itinerary/generate', async (c) => {
               duration_minutes: a.durationMinutes,
               cost_estimate: a.costEstimate,
               sort_order: idx,
+              latitude: a.latitude ?? null,
+              longitude: a.longitude ?? null,
             }))
           )
         }
@@ -192,6 +194,8 @@ itineraryRouter.post('/:id/itinerary/days/:dayNumber/regenerate', async (c) => {
               duration_minutes: a.durationMinutes,
               cost_estimate: a.costEstimate,
               sort_order: idx,
+              latitude: a.latitude ?? null,
+              longitude: a.longitude ?? null,
             }))
           )
         }
@@ -257,3 +261,63 @@ itineraryRouter.patch(
     return c.json({ data })
   }
 )
+
+// Geocode activities that are missing coordinates
+itineraryRouter.post('/:id/itinerary/geocode', async (c) => {
+  const userId = c.get('userId')
+  const tripId = c.req.param('id')
+
+  const { data: trip, error } = await db
+    .from('trips')
+    .select('id, destination_country')
+    .eq('id', tripId)
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !trip) {
+    return c.json({ error: 'Trip not found', code: 'NOT_FOUND' }, 404)
+  }
+
+  // Fetch activities missing coordinates via join
+  const { data: days } = await db
+    .from('itinerary_days')
+    .select('id, activities(id, title, latitude)')
+    .eq('trip_id', tripId)
+
+  const missing: { id: string; title: string }[] = []
+  for (const day of days ?? []) {
+    for (const act of (day.activities as { id: string; title: string; latitude: number | null }[]) ?? []) {
+      if (act.latitude === null) missing.push({ id: act.id, title: act.title })
+    }
+  }
+
+  if (missing.length === 0) {
+    return c.json({ data: { geocoded: 0 } })
+  }
+
+  let geocoded = 0
+  for (const activity of missing) {
+    const query = encodeURIComponent(`${activity.title}, ${trip.destination_country}`)
+    try {
+      // Nominatim — free OpenStreetMap geocoding, no API key required
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`,
+        { headers: { 'User-Agent': 'WanderPlan/1.0' } }
+      )
+      const json = await res.json() as { lat: string; lon: string }[]
+      if (json[0]) {
+        await db
+          .from('activities')
+          .update({ latitude: parseFloat(json[0].lat), longitude: parseFloat(json[0].lon) })
+          .eq('id', activity.id)
+        geocoded++
+      }
+    } catch {
+      // Skip on error, leave null
+    }
+    // Nominatim requires max 1 request/second
+    await new Promise((r) => setTimeout(r, 1100))
+  }
+
+  return c.json({ data: { geocoded } })
+})
